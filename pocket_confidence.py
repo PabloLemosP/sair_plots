@@ -17,11 +17,12 @@ combined_df = pd.read_csv(pocket_clusters_file)
 
 spearman_corr = spearmanr(combined_df['lddt'], combined_df['iptm'])
 print(f'Spearman correlation between lddt and iptm: {spearman_corr}')
-
-plt.hist(combined_df['lddt'], bins=50, edgecolor='black')
+plt.hist(combined_df['lddt'], bins=50, edgecolor='black', weights = np.ones_like(combined_df['lddt']) / len(combined_df['lddt']))
 plt.title("Distribution of pocket lddt scores")
 plt.xlabel("Pocket lddt score")
 plt.ylabel("Frequency")
+from matplotlib.ticker import PercentFormatter
+plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
 plt.savefig("figs/pocket_lddt_distribution.png", bbox_inches="tight", dpi=600)
 plt.close()
 
