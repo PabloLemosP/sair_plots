@@ -14,6 +14,9 @@ if __name__ == "__main__":
         "ChEMBL",
         "BindingDB",
     ], "Unexpected sources in the dataframe"
+    df = df.drop_duplicates(
+        ["entry_id"], keep="first"
+    )  # Drop duplicates based on 'entry_id' and 'index'
 
     df_chembl = df[df["source"] == "ChEMBL"]
     df_bindingdb = df[df["source"] == "BindingDB"]
@@ -39,12 +42,34 @@ if __name__ == "__main__":
         color="red",
         density=True,
     )
+    axis[0, 1].hist(
+        df["pIC50"],
+        bins=20,
+        alpha=0.5,
+        label="All",
+        color="grey",
+        fill=False,
+        histtype="step",
+        stacked=True,
+        density=True,
+    )
     axis[0, 2].hist(
         df_bindingdb["pIC50"],
         bins=20,
         alpha=0.5,
         label="BindingDB",
         color="grey",
+        density=True,
+    )
+    axis[0, 2].hist(
+        df["pIC50"],
+        bins=20,
+        alpha=0.5,
+        label="All",
+        color="grey",
+        fill=False,
+        histtype="step",
+        stacked=True,
         density=True,
     )
     # axis[0, 0].set_xlabel(r'$- \log_{10} \left( \mathrm{IC50 [nM]} \right) $')
@@ -62,6 +87,17 @@ if __name__ == "__main__":
     axis[1, 0].hist(
         df_cell["pIC50"], bins=20, alpha=0.5, label="Cell", color="green", density=True
     )
+    axis[1, 0].hist(
+        df["pIC50"],
+        bins=20,
+        alpha=0.5,
+        label="All",
+        color="grey",
+        fill=False,
+        histtype="step",
+        stacked=True,
+        density=True,
+    )
     axis[1, 1].hist(
         df_biochem["pIC50"],
         bins=20,
@@ -70,12 +106,34 @@ if __name__ == "__main__":
         color="orange",
         density=True,
     )
+    axis[1, 1].hist(
+        df["pIC50"],
+        bins=20,
+        alpha=0.5,
+        label="All",
+        color="grey",
+        fill=False,
+        density=True,
+        histtype="step",
+        stacked=True,
+    )
     axis[1, 2].hist(
         df_homogenate["pIC50"],
         bins=20,
         alpha=0.5,
         label="Homogenate",
         color="pink",
+        density=True,
+    )
+    axis[1, 2].hist(
+        df["pIC50"],
+        bins=20,
+        alpha=0.5,
+        label="All",
+        color="grey",
+        fill=False,
+        histtype="step",
+        stacked=True,
         density=True,
     )
     axis[1, 0].set_xlabel(r"$- \log_{10} \left( \mathrm{IC50 [nM]} \right) $")

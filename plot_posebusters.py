@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 plt.rcParams["font.family"] = "serif"
@@ -7,6 +8,26 @@ plt.rcParams["font.serif"] = ["Computer Modern Roman"]
 plt.rcParams.update({"font.size": 11})
 
 PATH_TO_DF = "/scratch/buckets/sb-alg-dgx-2q25/pablo/final_dfs/sair_v0.parquet"
+
+
+def analyze(df):
+
+    failed_names_series = df.groupby("entry_id")["all_passed"].sum() == 0
+
+    # Count the total number of fails
+    number_fails = failed_names_series.sum()
+
+    print(f"Total number of failed structures: {np.sum(df['all_passed'] == False)}")
+    print(f"Total number of structures: {len(df)}")
+    print(
+        f"Percentage of failed structures: {np.sum(df['all_passed'] == False) / len(df) * 100:.2f}%"
+    )
+
+    print(f"Total number of failed assemblies: {number_fails}")
+    print(f"Total number of assemblies: {len(df) // 5}")
+    print(
+        f"Percentage of failed assemblies: {number_fails / (len(df) // 5) * 100:.2f}%"
+    )
 
 
 def analyze_failures(df, analysis_name):
@@ -105,10 +126,20 @@ def analyze_failures(df, analysis_name):
 def prepare_plot_data(df):
     df_biochemical = df[df["assay"] == "biochem"]
     df_cell = df[df["assay"] == "cell"]
-    df_homogenate = df[df["assay"] == "homogenate"]
+    # df_homogenate = df[df["assay"] == "homogenate"]
+
+    print("Overall Analysis:")
+    print("====================================")
+    analyze(df)
+    print("Biochemical Assays:")
+    print("====================================")
+    analyze(df_biochemical)
+    print("Cell Assays:")
+    print("====================================")
+    analyze(df_cell)
 
     # Collect failure rates
-    overall_failures = analyze_failures(df, "Overall")
+    overall_failures = analyze_failures(df, "All Sources")
     biochemical_failures = analyze_failures(df_biochemical, "Biochemical Assays")
     cell_failures = analyze_failures(df_cell, "Cell Assays")
 
@@ -124,7 +155,9 @@ def prepare_plot_data(df):
 
     # Create a dictionary to hold the data for the DataFrame
     plot_data = {"Failure Type": all_failure_types}
-    plot_data["Overall"] = [overall_failures.get(ft, 0.0) for ft in all_failure_types]
+    plot_data["All Sources"] = [
+        overall_failures.get(ft, 0.0) for ft in all_failure_types
+    ]
     plot_data["Biochemical"] = [
         biochemical_failures.get(ft, 0.0) for ft in all_failure_types
     ]
@@ -133,7 +166,15 @@ def prepare_plot_data(df):
 
 
 if __name__ == "__main__":
-    df_plot = prepare_plot_data(pd.read_parquet(PATH_TO_DF))
+    df = pd.read_parquet(PATH_TO_DF)
+    priority = {"ChEMBL": 0, "BindingDB": 1}
+    df["source_priority"] = df["source"].map(priority)
+    df = (
+        df.sort_values("source_priority")
+        .drop_duplicates(["entry_id", "index"], keep="first")
+        .drop(columns="source_priority")
+    )
+    df_plot = prepare_plot_data(df)
     df_plot = df_plot.set_index("Failure Type")
 
     # --- Plotting ---

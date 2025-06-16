@@ -22,9 +22,11 @@ def analyse_df_and_return_scores(df_subset):
     # Define methods and their respective score columns and whether to negate them
     methods_info = {
         "Vina": {"score_col": "vina_score", "negate": True},
+        "Vina minimized": {"score_col": "vina_score_min", "negate": True},
         "Vinardo": {"score_col": "vinardo_score", "negate": True},
         "OnionNet": {"score_col": "onionnet_score", "negate": False},
         "AevPlig": {"score_col": "aevplig_score", "negate": False},
+        "iPTM": {"score_col": "iptm", "negate": False},
     }
 
     for method_name, info in methods_info.items():
@@ -63,30 +65,54 @@ def analyse_df_and_return_scores(df_subset):
 
 if __name__ == "__main__":
     df = pd.read_parquet(PATH_TO_DF)
+    df = df[df["source"] == "ChEMBL"]  # Filter for ChEMBL data
+    df_highconf = df[df["confidence_score"] > 0.8]  # Filter for high confidence scores
     # Prepare data for plotting
     all_dfs = []
+    all_dfs_highconf = []
 
     # Overall Scores
     overall_scores_dict = analyse_df_and_return_scores(df)
     for method, scores in overall_scores_dict.items():
-        all_dfs.append({"Assay Type": "Overall Scores", "Method": method, **scores})
+        all_dfs.append({"Assay Type": "All Sources", "Method": method, **scores})
+
+    # High Confidence Scores
+    overall_highconf_scores_dict = analyse_df_and_return_scores(df_highconf)
+    for method, scores in overall_highconf_scores_dict.items():
+        all_dfs_highconf.append(
+            {"Assay Type": "All Sources", "Method": method, **scores}
+        )
 
     # Biochemical Assay Scores
     df_biochem = df[df["assay"] == "biochem"]
     biochem_scores_dict = analyse_df_and_return_scores(df_biochem)
     for method, scores in biochem_scores_dict.items():
-        all_dfs.append(
-            {"Assay Type": "Biochemical Assay Scores", "Method": method, **scores}
+        all_dfs.append({"Assay Type": "Biochemical", "Method": method, **scores})
+
+    # High Confidence Biochemical Assay Scores
+    df_biochem_highconf = df_highconf[df_highconf["assay"] == "biochem"]
+    biochem_highconf_scores_dict = analyse_df_and_return_scores(df_biochem_highconf)
+    for method, scores in biochem_highconf_scores_dict.items():
+        all_dfs_highconf.append(
+            {"Assay Type": "Biochemical", "Method": method, **scores}
         )
+    # High Confidence Cell Assay Scores
 
     # Cell Assay Scores
     df_cell = df[df["assay"] == "cell"]
     cell_scores_dict = analyse_df_and_return_scores(df_cell)
     for method, scores in cell_scores_dict.items():
-        all_dfs.append({"Assay Type": "Cell Assay Scores", "Method": method, **scores})
+        all_dfs.append({"Assay Type": "Cell", "Method": method, **scores})
+
+    # High Confidence Cell Assay Scores
+    df_cell_highconf = df_highconf[df_highconf["assay"] == "cell"]
+    cell_highconf_scores_dict = analyse_df_and_return_scores(df_cell_highconf)
+    for method, scores in cell_highconf_scores_dict.items():
+        all_dfs_highconf.append({"Assay Type": "Cell", "Method": method, **scores})
 
     # Create the final DataFrame for plotting
     df_plot = pd.DataFrame(all_dfs)
+    df_plot_highconf = pd.DataFrame(all_dfs_highconf)
 
     # Set up the plots
     metrics = ["Spearman", "Pearson", "Kendall", "AUC"]
@@ -97,7 +123,7 @@ if __name__ == "__main__":
     n_methods = len(methods)
     n_assay_types = len(assay_types)
 
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(6, 4.5), sharey=False)
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(6, 6), sharey=False)
     plot_titles = [
         "Spearman Correlation",
         "Pearson Correlation",
@@ -112,9 +138,11 @@ if __name__ == "__main__":
     for i, metric in enumerate(metrics):
         ax = axes[i]  # Get the current subplot axis
         metric_df = df_plot[["Assay Type", "Method", metric]]
+        metric_df_highconf = df_plot_highconf[["Assay Type", "Method", metric]]
 
         # Calculate x-positions for each group of bars (per method)
         indices = np.arange(n_methods) * (n_assay_types * bar_width + group_spacing)
+        colors = ["tab:blue", "tab:orange", "tab:green"]
 
         for j, assay_type in enumerate(assay_types):
             # Extract scores for the current metric and assay type for all methods
@@ -128,35 +156,74 @@ if __name__ == "__main__":
                 for method in methods
             ]
             ax.bar(
-                indices + j * bar_width, scores_for_plot, bar_width, label=assay_type
+                indices + j * bar_width,
+                scores_for_plot,
+                bar_width,
+                label=assay_type,
+                color=colors[j],
+                # alpha=0.5,
             )
+
+            # Add high confidence scores as with alpha blending
+            scores_for_plot_highconf = [
+                metric_df_highconf.loc[
+                    (metric_df_highconf["Method"] == method)
+                    & (metric_df_highconf["Assay Type"] == assay_type),
+                    metric,
+                ].values[0]
+                for method in methods
+            ]
+            if assay_type == "All Sources":
+                ax.bar(
+                    indices + j * bar_width,
+                    scores_for_plot_highconf,
+                    bar_width,
+                    alpha=0.5,
+                    color=colors[j],
+                    label="High Conf",
+                )
+            else:
+                ax.bar(
+                    indices + j * bar_width,
+                    scores_for_plot_highconf,
+                    bar_width,
+                    alpha=0.5,
+                    color=colors[j],
+                )
 
         ax.set_xlabel("Method")
         ax.set_ylabel(plot_titles[i])
         # ax.set_title(f'Scores for {metric} Metric')
         # Center x-ticks under the method groups
-        ax.set_xticks(indices + (n_assay_types - 1) * bar_width / 2)
-        ax.set_xticklabels(methods)
+        ax.set_xticks(
+            indices + (n_assay_types - 1) * bar_width / 2,
+            labels=methods,
+            rotation=45,
+            ha="right",
+            fontsize=8,
+        )
+        # ax.set_xticklabels(methods, fontsize=9)
         # ax.legend(title='Assay Type')
         ax.grid(axis="y", linestyle="--", alpha=0.7)
         ax.axhline(
             0, color="grey", linewidth=0.8
         )  # Add a horizontal line at 0 for reference
 
-    axes[0].axhline(
-        0, color="black", linewidth=0.8, ls="--"
-    )  # Add a horizontal line at 0 for reference
-    axes[1].axhline(
-        0, color="black", linewidth=0.8, ls="--"
-    )  # Add a horizontal line at 0 for reference
-    axes[2].axhline(
-        0, color="black", linewidth=0.8, ls="--"
-    )  # Add a horizontal line at 0 for reference
-    axes[3].axhline(
-        0.5, color="black", linewidth=0.8, ls="--"
-    )  # Add a horizontal line at 0 for reference
+    # axes[0].axhline(
+    #     0, color="black", linewidth=0.8, ls="--"
+    # )  # Add a horizontal line at 0 for reference
+    # axes[1].axhline(
+    #     0, color="black", linewidth=0.8, ls="--"
+    # )  # Add a horizontal line at 0 for reference
+    # axes[2].axhline(
+    #     0, color="black", linewidth=0.8, ls="--"
+    # )  # Add a horizontal line at 0 for reference
+    # axes[3].axhline(
+    #     0.5, color="black", linewidth=0.8, ls="--"
+    # )  # Add a horizontal line at 0 for reference
+    axes[3].set_ylim(0.5, 0.75)
 
-    axes[1].legend()
+    axes[3].legend(fontsize=8, loc="upper left")
 
     plt.tight_layout()  # Adjust layout to prevent labels from overlapping
     plt.savefig(

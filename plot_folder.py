@@ -50,12 +50,22 @@ if __name__ == "__main__":
         "ChEMBL",
         "BindingDB",
     ], "Unexpected sources in the dataframe"
+
+    # Drop duplicates based on 'entry_id' keeping ChEMBL entries first, as they are the ones with assay info
+    priority = {"ChEMBL": 0, "BindingDB": 1}
+    df["source_priority"] = df["source"].map(priority)
+    df = (
+        df.sort_values("source_priority")
+        .drop_duplicates(["entry_id", "index"], keep="first")
+        .drop(columns="source_priority")
+    )
+
     df_biochem = df[df["assay"] == "biochem"]
     df_cell = df[df["assay"] == "cell"]
     # df_homogenate = df[df["assay"] == "homogenate"]
 
     spearman_results = get_spearman_results([df, df_biochem, df_cell])
-    assay_labels = ["Overall", "Bioch", "Cell"]
+    assay_labels = ["All Sources", "Bioch", "Cell"]
     title_labels = [
         "PTM (+)",
         "iPTM (+)",
@@ -78,7 +88,7 @@ if __name__ == "__main__":
         ax.set_title(title, fontsize=9)
         ax.set_ylim(-0.4, 0.4)
         if i % 3 == 0:
-            ax.set_ylabel("Spearman Correlation", fontsize=9)
+            ax.set_ylabel("Spearman Correlation (IC 50)", fontsize=9)
         ax.axhline(0, color="black", linewidth=0.5, linestyle="--")
         for j, v in enumerate(spearman_results[i]):
             ax.text(
