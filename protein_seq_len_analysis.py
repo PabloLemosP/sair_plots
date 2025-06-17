@@ -22,7 +22,7 @@ freq_df.to_csv("data/seq_len_frequency.csv", index=False)
 bins = 50
 hist, bin_edges = np.histogram(df["seq_len"], bins=bins)
 # Convert frequency to percentage
-# hist_percentage = hist / hist.sum() * 100
+hist_percentage = hist / hist.sum()  # * 100
 
 dark_blue = "#4882b4"
 
@@ -30,7 +30,7 @@ plt.figure(figsize=(6, 4))
 for i in range(len(hist)):
     plt.bar(
         (bin_edges[i] + bin_edges[i + 1]) / 2,
-        hist[i],
+        hist_percentage[i],
         width=bin_edges[i + 1] - bin_edges[i],
         color=dark_blue,
         align="center",
