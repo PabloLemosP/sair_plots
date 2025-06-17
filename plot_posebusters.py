@@ -100,6 +100,10 @@ def analyze_failures(df, analysis_name):
             pb: (count / denominator) * 100 for pb, count in fail_counts.items()
         }
 
+    # Add the nan_failure_rate to the fail_counts dictionary
+    #    fail_counts["RDKit Failure"] = nan_failure_rate
+    failure_rates["RDKit Failure"] = nan_failure_rate
+
     # print("Failures per PoseBuster:")
     # for pb, rate in failure_rates.items():
     #     print(f"{pb}: {int(fail_counts[pb])} failures. Failure rate: {rate:.2f}%")
@@ -130,12 +134,17 @@ def prepare_plot_data(df):
     print("Overall Analysis:")
     print("====================================")
     analyze(df)
-    print("Biochemical Assays:")
-    print("====================================")
-    analyze(df_biochemical)
-    print("Cell Assays:")
-    print("====================================")
-    analyze(df_cell)
+    # print("Biochemical Assays:")
+    # print("====================================")
+    # analyze(df_biochemical)
+    # print("Cell Assays:")
+    # print("====================================")
+    # analyze(df_cell)
+
+    for family in df["family"].unique():
+        print(f"Family: {family}")
+        print("====================================")
+        analyze(df[df["family"] == family])
 
     # Collect failure rates
     overall_failures = analyze_failures(df, "All Sources")
