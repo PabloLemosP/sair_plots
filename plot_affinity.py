@@ -191,7 +191,7 @@ if __name__ == "__main__":
                     color=colors[j],
                 )
 
-        ax.set_xlabel("Method")
+        # ax.set_xlabel("Method")
         ax.set_ylabel(plot_titles[i])
         # ax.set_title(f'Scores for {metric} Metric')
         # Center x-ticks under the method groups

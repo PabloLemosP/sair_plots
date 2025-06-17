@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from common import PATH_TO_DF
 
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["text.usetex"] = True
 plt.rcParams["font.serif"] = ["Computer Modern Roman"]
 plt.rcParams.update({"font.size": 11})
-
-PATH_TO_DF = "/scratch/buckets/sb-alg-dgx-2q25/pablo/final_dfs/sair_v0.parquet"
 
 
 def analyze(df):
